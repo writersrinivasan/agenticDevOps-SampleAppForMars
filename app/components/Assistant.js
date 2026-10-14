@@ -5,7 +5,7 @@ import { Markdown } from "./util";
 import { LAYER_COLORS } from "@/lib/agentsMeta";
 
 const SUGGESTIONS = ["What's the status?", "How many agents were created?", "Show me the MCP layer", "How does RAG work here?", "Show the DevOps pipeline", "When is the next launch window?", "Is there a dust storm risk?"];
-const STEP_COLORS = { Router: "#ff6b6b", ...LAYER_COLORS };
+const STEP_COLORS = { Router: "#ff6b6b", Trace: "#74c0fc", ...LAYER_COLORS };
 
 export default function Assistant({ ask }) {
   const [msgs, setMsgs] = useState([{ role: "assistant", content: "Hi, I'm **ARIA** 🤖 — your Red Horizon assistant. Ask me anything about Mars trips, or type **status** to see the whole AI orchestration, MCP and RAG layers live." }]);
@@ -55,6 +55,7 @@ export default function Assistant({ ask }) {
                 </div>
               )}
               <Markdown text={m.content} />
+              {m.extra?.traceUrl && <a className="trace-link" href={m.extra.traceUrl} target="_blank" rel="noreferrer">🔭 View this answer&apos;s trace in LangSmith ↗</a>}
               {m.extra && <Visuals list={m.extra.visuals} snap={m.extra.snapshot} rag={m.extra.rag?.hits?.length ? m.extra.rag : null} mcpCalls={m.extra.mcpCalls} />}
             </div>
           </div>

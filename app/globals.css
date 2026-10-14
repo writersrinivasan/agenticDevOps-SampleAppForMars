@@ -337,3 +337,10 @@ footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 3
   .hero-side { align-items: flex-start; }
   main { padding: 16px 16px 90px; }
 }
+
+/* ---------- LangSmith ---------- */
+.llm-badge.trace { background: rgba(116, 192, 252, 0.14); border-color: #74c0fc; color: #d0ebff; text-decoration: none; }
+.trace-link, .feed-sys.trace, .tl a { color: #74c0fc; font-weight: 600; text-decoration: none; }
+.trace-link:hover, .feed-sys.trace:hover, .tl a:hover { text-decoration: underline; }
+.bubble .trace-link { display: inline-block; margin-top: 8px; font-size: 12px; }
+h2 .trace-link { color: #fff; }

@@ -78,6 +78,9 @@ export default function Home() {
               {snap.llm.connected ? `⚡ Groq live · ${snap.llm.model}` : "🌙 Offline simulation · add GROQ_API_KEY"}
             </div>
           )}
+          {snap?.tracing.enabled && (
+            <a className="llm-badge trace" href="https://smith.langchain.com/" target="_blank" rel="noreferrer">🔭 LangSmith tracing · {snap.tracing.project}</a>
+          )}
           {snap && (
             <div className="kpis">
               <div><b>{snap.agents.total}</b><small>agents</small></div>

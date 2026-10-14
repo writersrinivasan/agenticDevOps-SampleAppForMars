@@ -47,6 +47,7 @@ function FeedItem({ e }) {
   if (e.type === "agent_start") return <div className="feed-sys" style={{ "--c": a.color }}>▶ {a.emoji} {a.name} started</div>;
   if (e.type === "agent_end") return <div className="feed-sys done" style={{ "--c": a.color }}>✔ {a.emoji} {a.name} · {e.summary}</div>;
   if (e.type === "run_start") return <div className="feed-sys">🛰️ Run {e.runId} · {e.agents} agents · {e.stages} stages · LLM {e.llm ? "live (Groq)" : "offline simulation"}</div>;
+  if (e.type === "trace") return e.url ? <a className="feed-sys trace" href={e.url} target="_blank" rel="noreferrer">🔭 Full trace recorded in LangSmith — open ↗</a> : null;
   if (e.type === "error") return <div className="feed-sys err">❌ {e.message}</div>;
   return null;
 }
@@ -90,6 +91,7 @@ export default function BookingPanel({ onDone }) {
   const [events, setEvents] = useState([]);
   const [booking, setBooking] = useState(null);
   const [running, setRunning] = useState(false);
+  const [traceUrl, setTraceUrl] = useState(null);
   const feedRef = useRef(null);
   const graphRef = useRef(null);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
@@ -104,10 +106,12 @@ export default function BookingPanel({ onDone }) {
     setAgents({});
     setEvents([]);
     setBooking(null);
+    setTraceUrl(null);
     graphRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     try {
       await streamEvents("/api/book", form, (ev) => {
         setAgents((s) => reduceAgents(s, ev));
+        if (ev.type === "trace") setTraceUrl(ev.url);
         if (ev.type !== "plan" && ev.type !== "done") setEvents((l) => [...l, ev]);
         if (ev.type === "done") setBooking(ev.booking);
       });
@@ -172,7 +176,7 @@ export default function BookingPanel({ onDone }) {
 
       {booking && (
         <div className="card wide">
-          <h2>🎫 Confirmed!</h2>
+          <h2>🎫 Confirmed! {traceUrl && <a className="count trace-link" href={traceUrl} target="_blank" rel="noreferrer">🔭 View LangSmith trace ↗</a>}</h2>
           <BoardingPass b={booking} />
           <div className="itinerary">
             <h3>🗺️ Itinerary (by the Itinerary Agent)</h3>

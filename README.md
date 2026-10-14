@@ -15,6 +15,17 @@ GROQ_API_KEY=gsk_...
 ```
 The header badge turns green (⚡ Groq live). Without a key, the app still runs in an **offline simulation** mode, so the demo never breaks.
 
+## Monitoring with LangSmith (optional)
+Add these lines to `.env.local`:
+```
+LANGSMITH_API_KEY=lsv2_...
+LANGSMITH_TRACING=true
+LANGSMITH_PROJECT=mars-agentic-travel
+```
+Every booking, DevOps run and ARIA answer is then recorded as a trace tree in the `mars-agentic-travel` project:
+`root chain → agent chains → llm (Groq, with token usage) / tool (MCP) / retriever (RAG)`.
+After each run the app shows a 🔭 link that opens that exact trace. If tracing fails, the app keeps working.
+
 ## Tabs
 | Tab | What it shows |
 |---|---|
@@ -31,4 +42,4 @@ Demo shortcut: `http://localhost:3000/?tab=aria&ask=status`
 - `lib/agentsMeta.js`: all 19 agents and the DAG stages
 - `lib/agents.js`: booking orchestrator · `lib/devops.js`: DevOps pipeline · `lib/runtime.js`: agent runtime (think / rag / mcp)
 - `lib/rag.js`: knowledge base and vector index · `lib/mcp.js` + `lib/mcpRegistry.js`: MCP servers and tools
-- `lib/groq.js`: Groq client with offline fallback · `app/api/*`: streaming NDJSON endpoints
+- `lib/groq.js`: Groq client with offline fallback · `lib/tracing.js`: LangSmith tracing · `app/api/*`: streaming NDJSON endpoints

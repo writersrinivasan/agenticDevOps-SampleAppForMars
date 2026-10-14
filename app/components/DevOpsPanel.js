@@ -37,6 +37,7 @@ export default function DevOpsPanel({ onDone }) {
         setM((p) => ({ ...p, ...Object.fromEntries(Object.entries(e).filter(([k]) => !["type", "ts"].includes(k))) }));
         if (e.p95) setLat((l) => [...l, e.p95]);
       }
+      if (e.type === "trace" && e.url) setLines((l) => [...l, { level: "sys", text: "🔭 LangSmith trace: ", url: e.url }]);
       if (e.type === "done") setLines((l) => [...l, { level: "ok", text: `🎉 ${e.version} released in ${(e.ms / 1000).toFixed(1)}s${e.healed ? " — 1 incident auto-healed, zero human pages" : ""}` }]);
     });
     setRunning(false);
@@ -69,7 +70,7 @@ export default function DevOpsPanel({ onDone }) {
         <div className="term" ref={termRef}>
           {!lines.length && <div className="muted">Waiting for a run…</div>}
           {lines.map((l, i) => (
-            <div key={i} className={`tl ${l.level}`}>{l.a && <span style={{ color: l.a.color }}>[{l.a.emoji} {l.a.name}] </span>}{l.text}</div>
+            <div key={i} className={`tl ${l.level}`}>{l.a && <span style={{ color: l.a.color }}>[{l.a.emoji} {l.a.name}] </span>}{l.text}{l.url && <a href={l.url} target="_blank" rel="noreferrer">open ↗</a>}</div>
           ))}
         </div>
       </div>

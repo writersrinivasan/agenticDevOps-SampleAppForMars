@@ -1,8 +1,7 @@
 import { chat } from "@/lib/groq";
-import { retrieve, contextBlock } from "@/lib/rag";
-import { callTool } from "@/lib/mcp";
+import { contextBlock } from "@/lib/rag";
+import { createRun } from "@/lib/runtime";
 import { getSnapshot } from "@/lib/snapshot";
-import { store } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -24,14 +23,15 @@ export async function POST(req) {
   const { messages = [] } = await req.json().catch(() => ({}));
   const question = messages.filter((m) => m.role === "user").at(-1)?.content || "status";
   const q = question.toLowerCase();
-  store.agentInvocations++;
+  const run = createRun("assistant", () => {}, { question, history: messages.length });
+  run.start("aria", 0);
 
   const steps = [];
   const visuals = detectVisuals(q);
   steps.push({ layer: "Router", label: "Intent routing", detail: visuals.length ? `visuals → ${visuals.join(", ")}` : "conversational answer" });
 
   // RAG
-  const rag = retrieve(question, 3, "aria");
+  const rag = run.rag("aria", question, 3);
   steps.push({ layer: "RAG", label: "Retrieved context", detail: `${rag.hits.length} chunks in ${rag.ms} ms · top "${rag.hits[0]?.title || "—"}"` });
 
   // MCP tool calls chosen by simple tool-routing rules
@@ -39,7 +39,12 @@ export async function POST(req) {
   if (/launch|window|when can|depart|ship/.test(q)) toolPlan.push(["get_launch_windows", { after: "2026-10" }]);
   if (/weather|dust|storm/.test(q)) toolPlan.push(["get_dust_forecast", { region: "Jezero Crater" }]);
   if (visuals.includes("devops") || visuals === ALL_VISUALS || /health|uptime|latency/.test(q)) toolPlan.push(["get_cluster_health", {}]);
-  const mcpCalls = await Promise.all(toolPlan.map(([t, a]) => callTool(t, a, "aria")));
+  const mcpCalls = await Promise.all(
+    toolPlan.map(async ([t, a]) => {
+      await run.mcp("aria", t, a);
+      return run.trace.events.findLast((e) => e.type === "mcp" && e.entry.tool === t).entry;
+    })
+  );
   steps.push({ layer: "MCP", label: "Tool calls", detail: mcpCalls.length ? mcpCalls.map((c) => `${c.serverName}.${c.tool}`).join(", ") : "none needed" });
 
   const snapshot = getSnapshot();
@@ -69,12 +74,17 @@ export async function POST(req) {
       ...messages.slice(-6, -1).map((m) => ({ role: m.role, content: String(m.content).slice(0, 800) })),
       { role: "user", content: `${question}\n\nRETRIEVED CONTEXT:\n${contextBlock(rag.hits)}\n\nMCP TOOL RESULTS:\n${JSON.stringify(mcpCalls.map((c) => ({ tool: c.tool, result: c.result })))}\n\nLIVE SYSTEM SNAPSHOT:\n${JSON.stringify(compact)}` },
     ],
-    { max_tokens: 380, temperature: 0.5, fallback }
+    { max_tokens: 380, temperature: 0.5, fallback, parentRun: run.agentRun("aria"), traceName: "🤖 ARIA · answer" }
   );
   steps.push({ layer: "LLM", label: llm.live ? `Groq ${snapshot.llm.model}` : "Offline template", detail: llm.live ? `${llm.ms} ms` : llm.error ? `fallback (${llm.error.slice(0, 60)})` : "no API key yet" });
 
+  run.end("aria", llm.live ? "answered (live)" : "answered (offline)", { visuals });
+  const traceUrl = await run.closeTrace({ reply: llm.text, visuals });
+  if (traceUrl) steps.push({ layer: "Trace", label: "LangSmith", detail: "full trace recorded" });
+
   return Response.json({
     reply: llm.text,
+    traceUrl,
     live: llm.live,
     visuals,
     steps,
